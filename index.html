@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Моя планета</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--a:#7c5cff;--b:#35d0ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 30% 20%,#2a1b5e,#0a0c24 60%,#04050f);color:#eef1ff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:none}
+#home{position:fixed;inset:0;overflow-y:auto;padding:20px;text-align:center}.wrap{max-width:560px;margin:0 auto}
+h1{font-size:clamp(34px,9vw,60px);margin:5vh 0 6px;letter-spacing:2px}
+.sub{font-size:clamp(16px,4.4vw,22px);opacity:.85;margin-bottom:22px}
+button{font:inherit;font-size:18px;color:#fff;border:0;border-radius:999px;padding:14px 24px;margin:6px;background:linear-gradient(135deg,var(--a),var(--b));cursor:pointer;box-shadow:0 6px 24px #7c5cff55;transition:transform .2s}
+button:hover{transform:scale(1.05)}button.g{background:#ffffff1a;box-shadow:none}button.big{display:block;width:calc(100% - 12px)}
+button.r{background:#ff4d6d;box-shadow:none;font-size:14px;padding:7px 14px;margin:4px 0 0}
+.steps{margin-top:22px;text-align:left;background:#ffffff0f;border-radius:20px;padding:14px 20px;line-height:1.9}
+input{font:inherit;font-size:17px;width:100%;padding:12px 16px;border-radius:14px;border:1px solid #ffffff33;background:#ffffff14;color:#fff;margin:6px 0}
+.card{background:#ffffff0f;border-radius:20px;padding:14px;text-align:left}
+.ui{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:0;right:0;display:none;justify-content:center;flex-wrap:wrap;z-index:5}
+.ui button{font-size:15px;padding:9px 16px}
+body.cls .ui{display:none!important}
+#x{position:fixed;top:10px;right:10px;display:none;opacity:.2;padding:8px 14px;z-index:6}body.cls #x{display:block}
+#tip{position:fixed;display:none;pointer-events:none;background:#0b0d2acc;border:1px solid #ffffff44;border-radius:16px;padding:10px 16px;z-index:7;backdrop-filter:blur(6px)}
+#ttl,#empty{position:fixed;inset:0;display:none;align-items:center;justify-content:center;font-weight:700;pointer-events:none;z-index:6;text-align:center;padding:20px}
+#ttl{font-size:clamp(28px,7vw,64px);text-shadow:0 0 30px #7c5cff}#empty{font-size:20px;opacity:.7;font-weight:400}
+.modal{position:fixed;inset:0;background:#040510b3;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}.modal.on{display:flex}
+.box{background:#14163a;border-radius:24px;padding:18px;max-width:480px;width:100%;max-height:94%;overflow:auto;text-align:center}
+#prev{width:200px;height:200px;border-radius:50%;box-shadow:0 0 40px #35d0ff88}
+#fly{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:30;background:#040510d9;font-size:24px;font-weight:700;padding:20px;text-align:center}
+#fly img{width:min(60vw,320px);height:min(60vw,320px);border-radius:50%;animation:fl 2.2s ease-in forwards;box-shadow:0 0 60px #35d0ff}
+@keyframes fl{0%{transform:scale(1);opacity:1}60%{transform:scale(1.1) rotate(8deg)}100%{transform:scale(.05) rotate(240deg) translateY(-200px);opacity:0}}
+.th{display:inline-block;width:92px;margin:6px;font-size:12px;vertical-align:top}.th img{width:84px;height:84px;border-radius:50%}
+.small{font-size:13px;opacity:.75}
+#ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:3px solid #35d0ff;border-radius:50%;box-shadow:0 0 0 999px #000a;width:80%;height:80%;pointer-events:none}
+</style></head><body>
+<canvas id="gl"></canvas>
+
+<div id="home"><div class="wrap">
+<h1>МОЯ ПЛАНЕТА 🚀</h1><div class="sub">Нарисуй свою планету — и отправь её в космос!</div>
+<div class="card"><b>👩‍🏫 Вход для учителя</b>
+<input id="lgN" placeholder="Ваше имя" autocomplete="username">
+<input id="lgP" type="password" placeholder="Пароль" autocomplete="current-password">
+<div id="lgM" class="small" style="min-height:20px"></div>
+<button class="big" onclick="auth(false)">🔑 Войти</button>
+<button class="big g" id="lgReg" style="display:none" onclick="auth(true)">✨ Создать мой кабинет с этим паролем</button>
+<div class="small" id="lgSt"></div>
+<div class="small">Первый раз? Введите имя и придумайте пароль, затем нажмите «Войти»: сайт предложит создать кабинет.</div></div>
+<div class="steps">1. Нарисуй планету<br>→ 2. Отдай рисунок учителю<br>→ 3. Учитель снимает рисунок на камеру<br>→ 4. Планета появляется в космосе</div>
+</div></div>
+
+<div class="ui" id="ui">
+<button onclick="openCam()">📷 Добавить планету</button>
+<button class="g" onclick="showList()">🪐 Планеты (<span id="cnt">0</span>)</button>
+<button class="g" onclick="classMode(true)">🖥️ Режим класса</button>
+<button class="g" onclick="logout()">Выйти</button></div>
+<button class="g" id="x" onclick="classMode(false)">✕</button>
+<div id="tip"></div><div id="ttl"></div><div id="empty">Нажмите «📷 Добавить планету» и снимите рисунок ребёнка</div>
+
+<input type="file" id="pf" accept="image/*" capture="environment" hidden>
+<div class="modal" id="m-cam"><div class="box">
+<b>Наведите камеру на рисунок</b><div class="small">Поместите планету в круг и нажмите «Снять»</div>
+<div style="position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:16px;background:#000;margin:10px 0">
+<video id="vid" playsinline muted style="width:100%;height:100%;object-fit:cover"></video><img id="pimg" style="display:none;width:100%;height:100%;object-fit:cover"><div id="ring"></div></div>
+<input type="range" id="zoom" min="30" max="100" value="80" oninput="ring.style.width=ring.style.height=this.value+'%'">
+<div class="small">Размер круга</div>
+<button class="big" onclick="snap()">📸 Снять</button>
+<button class="big g" onclick="$('pf').click()">📱 Снять приложением «Камера» телефона</button>
+<button class="big g" onclick="closeCam()">Готово</button></div></div>
+
+<div class="modal" id="m-rev"><div class="box">
+<div class="small">Так планета будет выглядеть в космосе</div><br>
+<img id="prev"><input id="inCr" placeholder="Имя ученика (необязательно)"><input id="inNm" placeholder="Название планеты (необязательно)">
+<button class="big" onclick="saveCur()">🚀 Отправить в космос</button>
+<button class="big g" onclick="$('m-rev').classList.remove('on')">Снять заново</button></div></div>
+
+<div class="modal" id="m-list"><div class="box"><b>🪐 Планеты</b><div id="list"></div>
+<button class="big g" onclick="$('m-list').classList.remove('on')">Закрыть</button></div></div>
+<div id="fly"><img id="flyI"><div style="margin-top:20px">Вот мой рисунок — теперь он живёт в космосе!</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+<script>
+/* ===== ВСТАВЬТЕ СЮДА НАСТРОЙКИ FIREBASE вместо null, чтобы данные были общими для телефона и ноутбука =====
+   Пример: const FIREBASE_CONFIG={apiKey:"...",authDomain:"...",projectId:"...",appId:"..."}; */
+const FIREBASE_CONFIG={
+  apiKey: "AIzaSyCN_y2E3TNsb_vPDczp004Xlu66VTobtFM",
+  authDomain: "kosmos-1c327.firebaseapp.com",
+  projectId: "kosmos-1c327",
+  storageBucket: "kosmos-1c327.firebasestorage.app",
+  messagingSenderId: "883729906806",
+  appId: "1:883729906806:web:ef1845475688a7787ab357"
+};
+const $=id=>document.getElementById(id),ring=$('ring');
+addEventListener('error',e=>{$('lgM').textContent='Ошибка: '+e.message});addEventListener('unhandledrejection',e=>{$('lgM').textContent='Ошибка: '+(e.reason&&e.reason.message||e.reason)});
+let ready=Promise.resolve(),db=null,fa=null,cid=null,cls=null,planets=[],unsub=null,first=true,cm=false,pres=null,curView='home',curOut=null,stream=null;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)),rnd=n=>[...crypto.getRandomValues(new Uint8Array(n))].map(x=>(x%36).toString(36)).join('');
+const sha=async t=>!(window.crypto&&crypto.subtle)?[...t].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7).toString(16):[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))].map(x=>x.toString(16).padStart(2,'0')).join('');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nm=d=>d.name||`Планета №${d.num}`;
+/* локальное хранилище, если нет Firebase и Claude */
+function localDb(){
+ const subs={},mem={};
+ const get=async c=>{try{const v=localStorage.getItem('mp:'+c);if(v)return JSON.parse(v)}catch(e){}return mem[c]||{}};
+ const put=async(m,c)=>{mem[c]=m;try{localStorage.setItem('mp:'+c,JSON.stringify(m))}catch(e){if(/quota/i.test(e.name||''))throw new Error('Память браузера заполнена')}};
+ const snap=(m,ids,ty='added')=>{const docs=ids.map(id=>({id,exists:true,data:()=>m[id]}));return{docs,empty:!docs.length,docChanges:()=>docs.map(doc=>({type:ty,doc}))}};
+ const ref=(c,id)=>({id,async get(){const m=await get(c);return{id,exists:id in m,data:()=>m[id]}},
+  async set(o){const m=await get(c);m[id]=o;await put(m,c);(subs[c]||[]).forEach(f=>f(snap(m,[id])))},
+  async delete(){const m=await get(c),old={[id]:m[id]};delete m[id];await put(m,c);(subs[c]||[]).forEach(f=>f(snap(old,[id],'removed')))}});
+ return{local:true,collection:c=>({doc:id=>ref(c,id),
+  where(f,op,v){return{async get(){const m=await get(c);return snap(m,Object.keys(m).filter(k=>m[k][f]===v))}}},
+  onSnapshot(cb){(subs[c]=subs[c]||[]).push(cb);get(c).then(m=>cb(snap(m,Object.keys(m).sort((a,b)=>m[a].created-m[b].created))));return()=>{subs[c]=subs[c].filter(f=>f!==cb)}}})};
+}
+function go(v){curView=v;$('home').style.display=v==='home'?'block':'none';$('gl').style.display=v==='galaxy'?'block':'none';$('ui').style.display=v==='galaxy'?'flex':'none';if(v==='galaxy')resize();upd()}
+function upd(){$('cnt').textContent=planets.length;$('empty').style.display=curView==='galaxy'&&!planets.length?'flex':'none'}
+async function init(){
+ if(FIREBASE_CONFIG&&window.firebase){try{firebase.initializeApp(FIREBASE_CONFIG);fa=firebase.auth();db=firebase.firestore()}catch(e){fa=null;db=null}}
+ if(!db&&typeof claude!=='undefined'){try{db=await Promise.race([claude.use('db'),sleep(1200).then(()=>null)])}catch(e){}}
+ if(!db)db=localDb();
+ try{const ss=JSON.parse(localStorage.getItem('mp_s')||'null');if(ss&&!fa){const d=await db.collection('teachers').doc(ss.id).get();if(d.exists)enter(ss.id,d.data().name)}}catch(e){}
+ if(fa)await new Promise(r=>fa.onAuthStateChanged(async u=>{if(u&&!cid){try{const d=await db.collection('teachers').doc(u.uid).get();if(d.exists)enter(u.uid,d.data().name)}catch(e){}}r()}));
+ if(db.local)$('lgSt').textContent='Сейчас данные хранятся только в этом браузере. Чтобы кабинет и планеты были на телефоне и ноутбуке одновременно, подключите Firebase.';
+}
+async function auth(reg){
+ await ready;if(!db)db=localDb();
+ const name=$('lgN').value.trim(),pw=$('lgP').value,m=$('lgM');$('lgReg').style.display='none';
+ if(!name||pw.length<(fa?6:4)){m.textContent=`Введите имя и пароль (минимум ${fa?6:4} символов)`;return}
+ m.textContent='Проверяю…';
+ try{
+  if(fa){
+   const email=(await sha(name.toLowerCase())).slice(0,40)+'@moyaplaneta.app';
+   if(reg){const c=await fa.createUserWithEmailAndPassword(email,pw);await db.collection('teachers').doc(c.user.uid).set({name,created:Date.now()});enter(c.user.uid,name)}
+   else{const c=await fa.signInWithEmailAndPassword(email,pw);const d=await db.collection('teachers').doc(c.user.uid).get();enter(c.user.uid,d.exists?d.data().name:name)}
+   return}
+  const s=await db.collection('teachers').where('nameKey','==',name.toLowerCase()).get();
+  if(reg){
+   if(!s.empty){m.textContent='Это имя уже занято, добавьте фамилию или цифру';return}
+   const id=rnd(10),salt=rnd(12);
+   await db.collection('teachers').doc(id).set({name,nameKey:name.toLowerCase(),salt,hash:await sha(salt+pw),created:Date.now()});enter(id,name);
+  }else{
+   const d=s.docs[0];
+   if(!d){m.textContent='Такого учителя ещё нет. Хотите создать кабинет?';$('lgReg').style.display='block';return}
+   if(await sha(d.data().salt+pw)!==d.data().hash){m.textContent='Неверный пароль';return}
+   enter(d.id,d.data().name);
+  }
+ }catch(e){const c=e.code||'';
+  if(c==='auth/email-already-in-use')m.textContent='Это имя уже занято. Если это вы, нажмите «Войти».';
+  else if(/user-not-found|invalid-credential|wrong-password|invalid-login/.test(c)){m.textContent='Неверное имя или пароль. Если вы здесь впервые, создайте кабинет.';$('lgReg').style.display='block'}
+  else m.textContent='Ошибка: '+(e.message||c)}
+}
+function enter(id,name){
+ cid=id;cls={name};try{localStorage.setItem('mp_s',JSON.stringify({id}))}catch(e){}
+ if(unsub)unsub();clearPlanets();first=true;
+ unsub=db.collection(`teachers/${id}/planets`).onSnapshot(sn=>{
+  sn.docChanges().forEach(c=>{if(c.type==='added')addPlanet({id:c.doc.id,...c.doc.data()},!first);else if(c.type==='removed')rmPlanet(c.doc.id)});
+  first=false;upd();if($('m-list').classList.contains('on'))showList();
+ });
+ $('lgP').value='';go('galaxy');
+}
+function logout(){if(fa)fa.signOut();if(unsub)unsub();unsub=null;cid=cls=null;clearPlanets();try{localStorage.removeItem('mp_s')}catch(e){}closeCam();classMode(false);go('home')}
+/* камера */
+let photoMode=false;
+async function openCam(){
+ photoMode=false;$('vid').style.display='block';$('pimg').style.display='none';
+ if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+   $('vid').srcObject=stream;await $('vid').play();$('m-cam').classList.add('on');return}catch(e){}
+ }
+ photoMode=true;$('vid').style.display='none';$('m-cam').classList.add('on');$('pf').click();
+}
+$('pf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;photoMode=true;$('vid').style.display='none';const i=$('pimg');i.onload=()=>{i.style.display='block'};i.src=URL.createObjectURL(f)};
+function closeCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('m-cam').classList.remove('on')}
+function snap(){
+ const v=photoMode?$('pimg'):$('vid'),W=photoMode?v.naturalWidth:v.videoWidth,H=photoMode?v.naturalHeight:v.videoHeight;if(!W)return;
+ const side=Math.min(W,H)*$('zoom').value/100,o=document.createElement('canvas');
+ o.width=o.height=384;o.getContext('2d').drawImage(v,(W-side)/2,(H-side)/2,side,side,0,0,384,384);
+ curOut=o;$('prev').src=o.toDataURL('image/jpeg',.8);$('inCr').value=$('inNm').value='';$('m-rev').classList.add('on');
+}
+async function saveCur(){
+ $('m-rev').classList.remove('on');
+ const id=Math.random().toString(36).slice(2,10),img=curOut.toDataURL('image/jpeg',.8),num=Math.max(0,...planets.map(p=>p.d.num||0))+1;
+ try{await db.collection(`teachers/${cid}/planets`).doc(id).set({img,name:$('inNm').value.trim(),creator:$('inCr').value.trim(),created:Date.now(),num})}
+ catch(e){alert('Не удалось сохранить: '+(e.message||e.code));return}
+ $('flyI').src=img;$('fly').style.display='flex';await sleep(2300);$('fly').style.display='none';
+}
+/* список и удаление */
+function showList(){
+ $('list').innerHTML=planets.map(p=>`<div class="th"><img src="${p.d.img}"><br>${esc(nm(p.d))}<br><button class="r" onclick="delP('${p.d.id}')">Удалить</button></div>`).join('')||'<p class="small">Пока нет планет</p>';
+ $('m-list').classList.add('on');
+}
+async function delP(id){
+ const p=planets.find(x=>x.d.id===id);if(!p||!confirm(`Удалить «${nm(p.d)}»? Это нельзя отменить.`))return;
+ try{await db.collection(`teachers/${cid}/planets`).doc(id).delete()}catch(e){alert('Не удалось удалить: '+(e.message||e.code))}
+}
+/* ---------- 3D ---------- */
+const cv=$('gl'),ren=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}),sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,2000);
+ren.setPixelRatio(Math.min(devicePixelRatio,2));
+function resize(){ren.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',resize);
+function pts(n,rmin,rmax,size,color,op){const g=new THREE.BufferGeometry(),a=new Float32Array(n*3);
+ for(let i=0;i<n;i++){const r=rmin+Math.random()*(rmax-rmin),t=Math.random()*6.283,p=Math.acos(2*Math.random()-1);a.set([r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t)],i*3)}
+ g.setAttribute('position',new THREE.BufferAttribute(a,3));const p=new THREE.Points(g,new THREE.PointsMaterial({color,size,transparent:true,opacity:op,sizeAttenuation:false,depthWrite:false}));sc.add(p);return p}
+const star1=pts(1800,300,900,1.6,0xffffff,.9),star2=pts(1200,250,800,2.2,0xbfd4ff,.8),star3=pts(500,200,700,2.8,0xffd9a0,.8),dust=pts(700,12,80,2.2,0x9fd8ff,.55),dust2=pts(400,10,60,2.6,0xffb3e6,.45);
+sc.add(new THREE.AmbientLight(0x7788bb,.55));const sun=new THREE.PointLight(0xfff0dd,2.2,0,0);sc.add(sun);
+{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'#fff');g.addColorStop(.25,'#ffd98a');g.addColorStop(1,'#0000');x.fillStyle=g;x.fillRect(0,0,128,128);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),blending:THREE.AdditiveBlending,depthWrite:false}));sp.scale.set(4,4,1);sc.add(sp)}
+const rockMat=new THREE.MeshStandardMaterial({color:0x8a7f78,roughness:1,flatShading:true}),belts=[];
+for(let b=0;b<5;b++){const g=new THREE.Group();g.rotation.set((Math.random()-.5)*1.2,0,(Math.random()-.5)*1.2);
+ for(let i=0;i<50;i++){const r=9+b*7+Math.random()*10,a=Math.random()*6.283,m=new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),rockMat);
+  m.scale.set(.08+Math.random()*.3,.08+Math.random()*.25,.08+Math.random()*.3);m.position.set(Math.cos(a)*r,(Math.random()-.5)*4,Math.sin(a)*r);m.userData.t=[Math.random()*2-1,Math.random()*2-1];g.add(m)}
+ g.userData.s=(.15+Math.random()*.35)*(b%2?-1:1);sc.add(g);belts.push(g)}
+const ease=t=>{const c=2.70158;return 1+c*Math.pow(t-1,3)+1.70158*Math.pow(t-1,2)};
+function addPlanet(d,anim){
+ if(planets.some(p=>p.d.id===d.id))return;
+ const i=planets.length,geo=new THREE.SphereGeometry(1,64,48),P=geo.attributes.position,U=geo.attributes.uv;
+ for(let k=0;k<P.count;k++)U.setXY(k,.5+P.getX(k)*.5,.5+P.getY(k)*.5);
+ const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:new THREE.TextureLoader().load(d.img),roughness:.85}));
+ mesh.add(new THREE.Mesh(new THREE.SphereGeometry(1.08,32,24),new THREE.MeshBasicMaterial({color:0x8fd0ff,transparent:true,opacity:.18,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false})));
+ const holder=new THREE.Group(),pivot=new THREE.Group(),r=7+i*2.3+Math.random()*.8,dir=Math.random()<.5?-1:1;
+ pivot.rotation.set((Math.random()-.5)*.9,Math.random()*6.28,(Math.random()-.5)*.9);holder.add(mesh);pivot.add(holder);sc.add(pivot);
+ planets.push({d,mesh,holder,pivot,r,s:.9+Math.random()*.8,ang:Math.random()*6.28,orb:dir*1.1/Math.sqrt(r)*(.7+Math.random()*.8),spin:(Math.random()<.5?-1:1)*(.5+Math.random()*1),ap:(anim||pres)?0:1,hv:1,y:(Math.random()-.5)*3});
+ mesh.userData.p=planets[planets.length-1];
+}
+function rmPlanet(id){const k=planets.findIndex(p=>p.d.id===id);if(k<0)return;sc.remove(planets[k].pivot);if(hover===planets[k])hover=null;planets.splice(k,1)}
+function clearPlanets(){planets.forEach(p=>sc.remove(p.pivot));planets=[];hover=null}
+let T=0,last=performance.now(),camT=0,nextC=2,target=null,hover=null;const comets=[],look=new THREE.Vector3();cam.position.set(0,6,30);
+function comet(){
+ const m=new THREE.Group(),h=new THREE.Mesh(new THREE.SphereGeometry(.25,12,12),new THREE.MeshBasicMaterial({color:0xffffff})),
+ t=new THREE.Mesh(new THREE.ConeGeometry(.22,9,10),new THREE.MeshBasicMaterial({color:0x8fd0ff,transparent:true,opacity:.5,blending:THREE.AdditiveBlending,depthWrite:false}));
+ t.position.y=4.5;m.add(h);m.add(t);
+ const dir=new THREE.Vector3(Math.random()-.5,(Math.random()-.5)*.4,Math.random()-.5).normalize();
+ m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().negate());
+ m.position.copy(dir).multiplyScalar(-60).add(new THREE.Vector3((Math.random()-.5)*30,(Math.random()-.5)*20,(Math.random()-.5)*30));
+ sc.add(m);comets.push({m,v:dir.multiplyScalar(14+Math.random()*10),life:10});
+}
+function loop(now){
+ requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;
+ if(curView!=='galaxy')return;
+ T+=dt;star1.rotation.y+=dt*.03;star2.rotation.y-=dt*.045;star2.rotation.x+=dt*.01;star3.rotation.z+=dt*.05;dust.rotation.y+=dt*.12;dust.rotation.x+=dt*.04;dust2.rotation.y-=dt*.1;dust2.rotation.z+=dt*.05;
+ belts.forEach(g=>{g.rotation.y+=g.userData.s*dt;g.children.forEach(m=>{m.rotation.x+=m.userData.t[0]*dt;m.rotation.y+=m.userData.t[1]*dt})});
+ nextC-=dt;if(nextC<0){comet();nextC=2.5+Math.random()*4}
+ for(let i=comets.length-1;i>=0;i--){const c=comets[i];c.m.position.addScaledVector(c.v,dt);if((c.life-=dt)<0){sc.remove(c.m);comets.splice(i,1)}}
+ const K=cm?1.5:1;
+ planets.forEach(p=>{p.ang+=p.orb*dt;p.mesh.rotation.y+=p.spin*dt;if(p.ap<1)p.ap=Math.min(1,p.ap+dt*.7);
+  p.holder.position.set(Math.cos(p.ang)*p.r,p.y,Math.sin(p.ang)*p.r);
+  p.hv+=((hover===p?1.3:1)-p.hv)*Math.min(1,dt*8);
+  p.mesh.scale.setScalar(Math.max(.0001,p.s*K*p.hv*(p.ap>0?ease(p.ap):0)))});
+ const maxR=planets.length?Math.max(...planets.map(p=>p.r)):10;
+ if(pres&&target){const w=new THREE.Vector3();target.holder.getWorldPosition(w);cam.position.lerp(w.clone().add(w.clone().normalize().multiplyScalar(5)).add(new THREE.Vector3(0,1.5,0)),dt*1.2);look.lerp(w,dt*2)}
+ else{camT+=dt;const D=(maxR+14)*(cm?.75:1),a=camT*.06;cam.position.lerp(new THREE.Vector3(Math.cos(a)*D,Math.sin(camT*.1)*7+5,Math.sin(a)*D),dt*1.5);look.lerp(new THREE.Vector3(),dt*2)}
+ cam.lookAt(look);ren.render(sc,cam);
+}
+requestAnimationFrame(loop);
+/* наведение */
+const ray=new THREE.Raycaster(),mp=new THREE.Vector2();
+function pick3(ev){mp.set(ev.clientX/innerWidth*2-1,-(ev.clientY/innerHeight)*2+1);ray.setFromCamera(mp,cam);const h=ray.intersectObjects(planets.map(p=>p.mesh),false)[0];return h?h.object.userData.p:null}
+function tip(p,ev){const t=$('tip');if(!p){t.style.display='none';return}const d=p.d;
+ t.innerHTML=`🌍 <b>${esc(nm(d))}</b>${d.creator?`<br>Создатель: ${esc(d.creator)}`:''}<br>Дата: ${new Date(d.created).toLocaleDateString('ru-RU')}`;
+ t.style.display='block';t.style.left=Math.min(ev.clientX+16,innerWidth-220)+'px';t.style.top=Math.min(ev.clientY+16,innerHeight-110)+'px'}
+cv.addEventListener('pointermove',ev=>{hover=pick3(ev);tip(hover,ev)});
+cv.addEventListener('pointerdown',ev=>{hover=pick3(ev);tip(hover,ev)});
+cv.addEventListener('pointerleave',()=>{hover=null;tip(null)});
+function classMode(on){cm=on;document.body.classList.toggle('cls',on);
+ if(on&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});
+ if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{});}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&cm)classMode(false)});
+async function present(){
+ if(!planets.length)return;const list=[...planets].sort((a,b)=>a.d.created-b.d.created);
+ pres=true;target=null;planets.forEach(p=>p.ap=0);classMode(true);
+ const t=$('ttl');t.textContent='Добро пожаловать в нашу галактику!';t.style.display='flex';await sleep(4000);t.style.display='none';
+ for(const p of list){if(!pres)return;target=p;p.ap=.001;await sleep(5500)}
+ pres=null;target=null;
+}
+ready=init().catch(()=>{if(!db)db=localDb()});
+</script>
+</body></html>
